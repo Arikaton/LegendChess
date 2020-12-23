@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8389941685122929053}
   - component: {fileID: 8389941685122929052}
   - component: {fileID: 8389941685122929049}
+  - component: {fileID: 5552875963378144906}
   m_Layer: 0
   m_Name: Marble Red Cube
   m_TagString: Untagged
@@ -107,3 +108,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   highlightedMaterial: {fileID: 2100000, guid: 0408da4999dfc4932a41345d1f84b012, type: 2}
+--- !u!65 &5552875963378144906
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8389941685122929055}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}

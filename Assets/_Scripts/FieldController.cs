@@ -1,30 +1,27 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class FieldController : MonoBehaviour
 {
     [SerializeField] private int horizontalSize;
     [SerializeField] private int verticalSize;
-    [SerializeField] private CharacterController characterController;
     [SerializeField] private Transform fieldsContainer;
 
     private List<Field> _fields;
-    private List<Field> _activeFields = new List<Field>();
+    public List<Field> ActiveFields { get; private set; }
 
     private Field[,] _fieldsMatrix;
 
     private void Start()
     {
+        ActiveFields = new List<Field>();
         _fields = new List<Field>(fieldsContainer.childCount);
         foreach (var field in fieldsContainer.GetComponentsInChildren<Field>())
         {
             _fields.Add(field);
         }
-        characterController.CharacterChanged += OnChangeCharacter;
         DefineFieldsMatrix();
+        
     }
 
     private void DefineFieldsMatrix()
@@ -37,26 +34,16 @@ public class FieldController : MonoBehaviour
         }
     }
 
-    private void OnChangeCharacter(Character character)
+    public void TurnOnFields(int lenght, Vector2Int startPos, CharacterMoveType characterMoveType)
     {
-        if (character is null)
-        {
-            TurnOffFields();
-            return;
-        }
-        var maxCharacterDistance = character.moveComponent.MaxMoveDistance;
-        var charPos = character.moveComponent.Position;
-        GetPossibleFields(maxCharacterDistance, charPos, character.moveComponent.moveType);
-        foreach (var possibleField in _activeFields)
-        {
-            possibleField.TurnOn();
-        }
+        GetPossibleFields(lenght, startPos, characterMoveType);
+        ActiveFields.ForEach(field => field.TurnOn());
     }
 
     public void TurnOffFields()
     {
-        _activeFields.ForEach(field => field.TurnOff());
-        _activeFields = new List<Field>();
+        ActiveFields.ForEach(field => field.TurnOff());
+        ActiveFields = new List<Field>();
     }
 
     public void PrintFieldsMatrix()
@@ -82,24 +69,24 @@ public class FieldController : MonoBehaviour
         print(holder);
     }
 
-    private List<Field> GetPossibleFields(int maxDistance, Vector2Int position, Move.MoveType moveType)
+    private void GetPossibleFields(int maxDistance, Vector2Int position, CharacterMoveType moveType)
     {
         switch (moveType)
         {
-            case Move.MoveType.straight:
+            case CharacterMoveType.Straight:
                 for (int i = 1; i <= maxDistance; i++)
                 {
                     if (CeilExistAndUsable(position.x + i, position.y))
-                        _activeFields.Add(_fieldsMatrix[position.x + i, position.y]);
+                        ActiveFields.Add(_fieldsMatrix[position.x + i, position.y]);
                     if (CeilExistAndUsable(position.x - i, position.y))
-                        _activeFields.Add(_fieldsMatrix[position.x - i, position.y]);
+                        ActiveFields.Add(_fieldsMatrix[position.x - i, position.y]);
                     if (CeilExistAndUsable(position.x, position.y + i))
-                        _activeFields.Add(_fieldsMatrix[position.x, position.y + i]);
+                        ActiveFields.Add(_fieldsMatrix[position.x, position.y + i]);
                     if (CeilExistAndUsable(position.x, position.y - i))
-                        _activeFields.Add(_fieldsMatrix[position.x, position.y - i]);
+                        ActiveFields.Add(_fieldsMatrix[position.x, position.y - i]);
                 }
                 break;
-            case Move.MoveType.anyCeil:
+            case CharacterMoveType.AnyCeil:
                 for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
                 {
                     for (int j = position.y - maxDistance; j <= position.y + maxDistance; j++)
@@ -108,12 +95,12 @@ public class FieldController : MonoBehaviour
                             continue;
                         if (CeilExistAndUsable(i, j))
                         {
-                            _activeFields.Add(_fieldsMatrix[i, j]);
+                            ActiveFields.Add(_fieldsMatrix[i, j]);
                         }
                     }
                 }
                 break;
-            case Move.MoveType.diagonally:
+            case CharacterMoveType.Diagonally:
                 for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
                 {
                     for (int j = position.y - maxDistance; j <= position.y + maxDistance; j++)
@@ -122,14 +109,13 @@ public class FieldController : MonoBehaviour
                             continue;
                         if (Mathf.Abs(i - position.x) == Mathf.Abs(j - position.y))
                         {
-                            _activeFields.Add(_fieldsMatrix[i, j]);
+                            if (CeilExistAndUsable(i, j))
+                                ActiveFields.Add(_fieldsMatrix[i, j]);
                         }
                     }
                 }
                 break;
         }
-        
-        return _activeFields;
     }
 
     private bool CeilExistAndUsable(int i, int j)
