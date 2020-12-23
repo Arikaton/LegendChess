@@ -4,8 +4,8 @@ using UnityEngine;
 
 public class CharacterAnimationController : MonoBehaviour
 {
-    private const string Walk_Animation = "Walk";
-    private const string Random_Attack_Animation = "RandomAttack";
+    private const string WalkAnimation = "Walk";
+    private const string RandomAttackAnimation = "RandomAttack";
     
     private Animator _animator;
 
@@ -16,19 +16,19 @@ public class CharacterAnimationController : MonoBehaviour
 
     public void StartWalkAnimation()
     {
-        _animator.SetBool(Walk_Animation, true);
+        _animator.SetBool(WalkAnimation, true);
     }
 
     public void StopMoveAnimation()
     {
-        _animator.SetBool(Walk_Animation, false);
+        _animator.SetBool(WalkAnimation, false);
     }
 
     public async void RandomAttack()
     {
         int randomValue = Random.Range(0, 3) + 1;
-        _animator.SetInteger(Random_Attack_Animation, randomValue);
+        _animator.SetInteger(RandomAttackAnimation, randomValue);
         await Task.Delay(100);
-        _animator.SetInteger(Random_Attack_Animation, 0);
+        _animator.SetInteger(RandomAttackAnimation, 0);
     }
 }

@@ -11,16 +11,19 @@ public class MoveController : MonoBehaviour
     
     public void OnTapToCharacter(CharacterDataContainer character)
     {
-        _currentCharacter = character;
         if (character is null)
         {
             fieldController.TurnOffFields();
             return;
         }
+        if (character != _currentCharacter)
+            fieldController.TurnOffFields();
+        
+        _currentCharacter = character;
         fieldController.TurnOnFields(
             character.moveComponent.MaxMoveDistance, 
             character.moveComponent.Position, 
-            character.moveComponent.moveType);
+            character.moveComponent.direction);
     }
 
     public void OnTapToField(Field field)

@@ -12,7 +12,7 @@ public class FieldController : MonoBehaviour
 
     private Field[,] _fieldsMatrix;
 
-    private void Start()
+    private void Awake()
     {
         ActiveFields = new List<Field>();
         _fields = new List<Field>(fieldsContainer.childCount);
@@ -34,11 +34,18 @@ public class FieldController : MonoBehaviour
         }
     }
 
-    public void TurnOnFields(int lenght, Vector2Int startPos, CharacterMoveType characterMoveType)
+    public void TurnOnFields(int lenght, Vector2Int startPos, Direction direction)
     {
-        GetPossibleFields(lenght, startPos, characterMoveType);
+        GetPossibleFields(lenght, startPos, direction);
         ActiveFields.ForEach(field => field.TurnOn());
     }
+
+    public void ChangeBusyType(Vector2Int index, bool busy)
+    {
+        _fieldsMatrix[index.x, index.y].IsBusy = busy;
+    }
+
+    public bool GetFieldBusyInfo(Vector2Int index) => _fieldsMatrix[index.x, index.y].IsBusy;
 
     public void TurnOffFields()
     {
@@ -69,52 +76,32 @@ public class FieldController : MonoBehaviour
         print(holder);
     }
 
-    private void GetPossibleFields(int maxDistance, Vector2Int position, CharacterMoveType moveType)
+    private void GetPossibleFields(int maxDistance, Vector2Int position, Direction moveType)
     {
-        switch (moveType)
+        for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
         {
-            case CharacterMoveType.Straight:
-                for (int i = 1; i <= maxDistance; i++)
+            for (int j = position.y - maxDistance; j <= position.y + maxDistance; j++)
+            {
+                if (i == position.x && j == position.y)
+                    continue;
+                if (CeilExistAndUsable(i, j))
                 {
-                    if (CeilExistAndUsable(position.x + i, position.y))
-                        ActiveFields.Add(_fieldsMatrix[position.x + i, position.y]);
-                    if (CeilExistAndUsable(position.x - i, position.y))
-                        ActiveFields.Add(_fieldsMatrix[position.x - i, position.y]);
-                    if (CeilExistAndUsable(position.x, position.y + i))
-                        ActiveFields.Add(_fieldsMatrix[position.x, position.y + i]);
-                    if (CeilExistAndUsable(position.x, position.y - i))
-                        ActiveFields.Add(_fieldsMatrix[position.x, position.y - i]);
-                }
-                break;
-            case CharacterMoveType.AnyCeil:
-                for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
-                {
-                    for (int j = position.y - maxDistance; j <= position.y + maxDistance; j++)
+                    switch (moveType)
                     {
-                        if (i == position.x && j == position.y)
-                            continue;
-                        if (CeilExistAndUsable(i, j))
-                        {
+                        case Direction.AnyCeil:
                             ActiveFields.Add(_fieldsMatrix[i, j]);
-                        }
-                    }
-                }
-                break;
-            case CharacterMoveType.Diagonally:
-                for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
-                {
-                    for (int j = position.y - maxDistance; j <= position.y + maxDistance; j++)
-                    {
-                        if (i == position.x && j == position.y)
-                            continue;
-                        if (Mathf.Abs(i - position.x) == Mathf.Abs(j - position.y))
-                        {
-                            if (CeilExistAndUsable(i, j))
+                            break;
+                        case Direction.Diagonally:
+                            if (Mathf.Abs(i - position.x) == Mathf.Abs(j - position.y))
                                 ActiveFields.Add(_fieldsMatrix[i, j]);
-                        }
+                            break;
+                        case Direction.Straight:
+                            if (i == position.x || j == position.y)
+                                ActiveFields.Add(_fieldsMatrix[i, j]);
+                            break;
                     }
                 }
-                break;
+            }
         }
     }
 
@@ -123,6 +110,8 @@ public class FieldController : MonoBehaviour
         if (i >= horizontalSize || i < 0)
             return false;
         if (j >= verticalSize || j < 0)
+            return false;
+        if (GetFieldBusyInfo(new Vector2Int(i, j)))
             return false;
         return true;
     }

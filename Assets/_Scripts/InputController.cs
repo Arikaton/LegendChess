@@ -24,12 +24,9 @@ public class InputController : MonoBehaviour
                 var character = hitInfo.transform.GetComponent<CharacterDataContainer>();
                 var field = hitInfo.transform.GetComponent<Field>();
                 
-                if (character != null)
-                    moveController.OnTapToCharacter(character);
-
                 if (field != null)
                     moveController.OnTapToField(field);
-                
+                moveController.OnTapToCharacter(character);
             }
         }
     }
