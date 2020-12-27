@@ -14,12 +14,12 @@ public class CharacterAnimationController : MonoBehaviour
         _animator = GetComponentInChildren<Animator>();
     }
 
-    public void StartWalkAnimation()
+    public void StartWalk()
     {
         _animator.SetBool(WalkAnimation, true);
     }
 
-    public void StopMoveAnimation()
+    public void StopWalk()
     {
         _animator.SetBool(WalkAnimation, false);
     }
