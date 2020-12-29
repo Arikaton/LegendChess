@@ -15,6 +15,7 @@ public class Character : MonoBehaviour
     [SerializeField] private Attack attack;
 
     private bool canMove = true;
+    private Vector2Int? moveEndPoint = null;
 
     private void Awake()
     {
@@ -55,12 +56,12 @@ public class Character : MonoBehaviour
     {
         if (activeCharacter is null || activeCharacter != this)
             return;
-        if (move.IsMoving) return;
+        
         if (ceil.IsHighlighted)
         {
             field.SetCeilBusy(ceil.PositionX, ceil.PositionY, true);
             field.SetCeilBusy(move.PositionX, move.PositionY, false);
-            move.DoMove(new Vector2Int(ceil.PositionX, ceil.PositionY));
+            moveEndPoint = new Vector2Int(ceil.PositionX, ceil.PositionY);
         }
         field.TurnOffFields();
         activeCharacter = null;

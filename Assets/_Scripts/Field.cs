@@ -33,6 +33,11 @@ public class Field : MonoBehaviour
         }
     }
 
+    public void HighlightCeil(Vector2Int position)
+    {
+        _fieldsMatrix[position.x, position.y].TurnOn();
+    }
+
     public void TurnOnFields(int lenght, Vector2Int startPos, Direction direction)
     {
         GetPossibleFields(lenght, startPos, direction);
