@@ -20,7 +20,7 @@ public class Character : MonoBehaviour
     private bool moveEndPointChoosed = false;
     private bool attackEndPointChoosed = false;
     public Vector2Int MoveEndPoint { get; private set; }
-    public Vector2Int AttackEndPoint { get; private set; }
+    public Vector2Int[] AttackEndPoints { get; private set; }
 
     public IEnumerator MoveProcess()
     {
@@ -31,12 +31,15 @@ public class Character : MonoBehaviour
 
     public IEnumerator AttackProcess()
     {
-        yield return StartCoroutine(move.RotateToPosition(AttackEndPoint));
+        for (var i = 0; i < AttackEndPoints.Length; i++)
+        {
+            yield return StartCoroutine(move.RotateToPosition(AttackEndPoint));
         
-        var aimCharacter = field.GetCharacterByIndex(AttackEndPoint);
-        if (aimCharacter != null && relationType != aimCharacter.relationType)
-            yield return StartCoroutine(attack.DoAttackCor(aimCharacter));
-        attackEndPointChoosed = false;
+            var aimCharacter = field.GetCharacterByIndex(AttackEndPoint);
+            if (aimCharacter != null && relationType != aimCharacter.relationType)
+                yield return StartCoroutine(attack.DoAttackCor(aimCharacter));
+            attackEndPointChoosed = false;
+        }
     }
 
     private void Awake()
@@ -48,6 +51,7 @@ public class Character : MonoBehaviour
 
     private void Start()
     {
+        AttackEndPoints = new Vector2Int[attack.AttackCeilCount];
         field.SetCeilBusy(move.Position, this);
     }
 
