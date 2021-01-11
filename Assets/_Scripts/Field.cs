@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using _Scripts.Charactrer;
+using _Scripts.Enums;
 using UnityEngine;
 
 public class Field : MonoBehaviour
@@ -8,11 +10,17 @@ public class Field : MonoBehaviour
     [SerializeField] private Transform fieldsContainer;
 
     private List<Ceil> _fields;
-    public List<Ceil> HighlightedFields { get; private set; }
+    private List<Ceil> HighlightedFields { get; set; }
 
     private Ceil[,] _fieldsMatrix;
 
     private void Awake()
+    {
+        Init();
+        DefineFieldsMatrix();
+    }
+    
+    private void Init()
     {
         HighlightedFields = new List<Ceil>();
         _fields = new List<Ceil>(fieldsContainer.childCount);
@@ -20,8 +28,6 @@ public class Field : MonoBehaviour
         {
             _fields.Add(field);
         }
-        DefineFieldsMatrix();
-        
     }
 
     private void DefineFieldsMatrix()
@@ -33,66 +39,95 @@ public class Field : MonoBehaviour
         }
     }
 
-    public void HighlightCeil(Vector2Int position)
+    public Ceil HighlightCeil(Vector2Int position)
     {
-        _fieldsMatrix[position.x, position.y].TurnOn();
+        var ceil = _fieldsMatrix[position.x, position.y];
+        HighlightedFields.Add(ceil);
+        ceil.TurnOn();
+        return ceil;
     }
 
-    public void TurnOnFields(int lenght, Vector2Int startPos, Direction direction)
+    public void HighlightCeilAndShowEffect(Vector2Int position, EffectType effectType)
     {
-        GetPossibleFields(lenght, startPos, direction);
+        var ceil = HighlightCeil(position);
+        switch (effectType)
+        {
+            case EffectType.Attack:
+               ceil.ShowAttack();
+               break;
+            case EffectType.Move:
+                ceil.ShowMove();
+                break;
+        }
+    }
+
+    public void TurnOnFields(int lenght, Vector2Int startPos, MoveDirection moveDirection)
+    {
+        GetPossibleFields(lenght, startPos, moveDirection);
         HighlightedFields.ForEach(field => field.TurnOn());
     }
 
-    public void SetCeilBusy(int row, int col, bool busy)
+    public void SetCeilBusy(Vector2Int position, Character character)
     {
-        _fieldsMatrix[row, col].IsBusy = busy;
+        _fieldsMatrix[position.x, position.y].Character = character;
+    }
+    
+    public void SetCeilFree(Vector2Int position)
+    {
+        _fieldsMatrix[position.x, position.y].Character = null;
     }
 
-    public bool GetCeilBusy(Vector2Int index) => _fieldsMatrix[index.x, index.y].IsBusy;
+    public bool GetCeilBusyState(Vector2Int index) => _fieldsMatrix[index.x, index.y].IsBusy;
+
+    public Character GetCharacterByIndex(Vector2Int index) => _fieldsMatrix[index.x, index.y].Character;
 
     public void TurnOffFields()
     {
         HighlightedFields.ForEach(field => field.TurnOff());
-        HighlightedFields = new List<Ceil>();
-    }
-    public override string ToString()
-    {
-        var holder = "";
-        for (var i = 0; i < horizontalSize; i++)
-        {
-            for (var j = 0; j < verticalSize; j++)
-            {
-                if (_fieldsMatrix[j, i] != null)
-                {
-                    holder += "X";
-                }
-                else
-                {
-                    holder += "0";
-                }
-            }
-
-            holder += "\n";
-        }
-
-        return holder;
+        HighlightedFields.Clear();
     }
 
-    private void GetPossibleFields(int maxDistance, Vector2Int position, Direction moveType)
+    private void GetPossibleFields(int maxDistance, Vector2Int position, MoveDirection moveType)
     {
         switch (moveType)
         {
-            case Direction.Straight:
+            case MoveDirection.Straight:
                 StraightPass(maxDistance, position);
+                AddCeilToHighlighted(position);
                 break;
-            case Direction.Diagonally:
+            case MoveDirection.Diagonally:
                 DiagonallyPass(maxDistance, position);
+                AddCeilToHighlighted(position);
                 break;
-            case Direction.Asterisk:
+            case MoveDirection.Asterisk:
                 StraightPass(maxDistance, position);
                 DiagonallyPass(maxDistance, position);
+                AddCeilToHighlighted(position);
                 break;
+            case MoveDirection.Any:
+                SimplePass(maxDistance, position);
+                break;
+        }
+    }
+
+    private void AddCeilToHighlighted(Vector2Int position)
+    {
+        HighlightedFields.Add(_fieldsMatrix[position.x, position.y]);
+    }
+
+    private void SimplePass(int maxDistance, Vector2Int position)
+    {
+        for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
+        {
+            for (int j = position.y - maxDistance; j <= position.y + maxDistance; j++)
+            {
+                if (i == position.x && j == position.y)
+                    continue;
+                if (CeilExist(i, j))
+                {
+                    HighlightedFields.Add(_fieldsMatrix[i, j]);
+                }
+            }
         }
     }
 
@@ -100,7 +135,7 @@ public class Field : MonoBehaviour
     {
         var currentX = position.x + 1;
         var currentY = position.y + 1;
-        while (CeilExistAndUsable(currentX, currentY) && (currentX - position.x) <= maxDistance)
+        while (CeilExistAndNotBusy(currentX, currentY) && (currentX - position.x) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[currentX, currentY]);
             currentX++;
@@ -109,7 +144,7 @@ public class Field : MonoBehaviour
 
         currentX = position.x - 1;
         currentY = position.y + 1;
-        while (CeilExistAndUsable(currentX, currentY) && (position.x - currentX) <= maxDistance)
+        while (CeilExistAndNotBusy(currentX, currentY) && (position.x - currentX) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[currentX, currentY]);
             currentX--;
@@ -118,7 +153,7 @@ public class Field : MonoBehaviour
 
         currentX = position.x + 1;
         currentY = position.y - 1;
-        while (CeilExistAndUsable(currentX, currentY) && (currentX - position.x) <= maxDistance)
+        while (CeilExistAndNotBusy(currentX, currentY) && (currentX - position.x) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[currentX, currentY]);
             currentX++;
@@ -127,7 +162,7 @@ public class Field : MonoBehaviour
 
         currentX = position.x - 1;
         currentY = position.y - 1;
-        while (CeilExistAndUsable(currentX, currentY) && (position.x - currentX) <= maxDistance)
+        while (CeilExistAndNotBusy(currentX, currentY) && (position.x - currentX) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[currentX, currentY]);
             currentX--;
@@ -138,41 +173,48 @@ public class Field : MonoBehaviour
     private void StraightPass(int maxDistance, Vector2Int position)
     {
         var currentXPos = position.x + 1;
-        while (CeilExistAndUsable(currentXPos, position.y) && (currentXPos - position.x) <= maxDistance)
+        while (CeilExistAndNotBusy(currentXPos, position.y) && (currentXPos - position.x) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[currentXPos, position.y]);
             currentXPos++;
         }
 
         currentXPos = position.x - 1;
-        while (CeilExistAndUsable(currentXPos, position.y) && (position.x - currentXPos) <= maxDistance)
+        while (CeilExistAndNotBusy(currentXPos, position.y) && (position.x - currentXPos) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[currentXPos, position.y]);
             currentXPos--;
         }
 
         var currentYPos = position.y + 1;
-        while (CeilExistAndUsable(position.x, currentYPos) && (currentYPos - position.y) <= maxDistance)
+        while (CeilExistAndNotBusy(position.x, currentYPos) && (currentYPos - position.y) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[position.x, currentYPos]);
             currentYPos++;
         }
 
         currentYPos = position.y - 1;
-        while (CeilExistAndUsable(position.x, currentYPos) && (position.y - currentYPos) <= maxDistance)
+        while (CeilExistAndNotBusy(position.x, currentYPos) && (position.y - currentYPos) <= maxDistance)
         {
             HighlightedFields.Add(_fieldsMatrix[position.x, currentYPos]);
             currentYPos--;
         }
     }
 
-    private bool CeilExistAndUsable(int i, int j)
+    private bool CeilExistAndNotBusy(int i, int j)
+    {
+        if (!CeilExist(i, j))
+            return false;
+        if (GetCeilBusyState(new Vector2Int(i, j)))
+            return false;
+        return true;
+    }
+
+    private bool CeilExist(int i, int j)
     {
         if (i >= horizontalSize || i < 0)
             return false;
         if (j >= verticalSize || j < 0)
-            return false;
-        if (GetCeilBusy(new Vector2Int(i, j)))
             return false;
         return true;
     }

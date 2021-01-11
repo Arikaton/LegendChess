@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 
 
@@ -6,6 +7,8 @@ public class CharacterAnimationController : MonoBehaviour
 {
     private const string WalkAnimation = "Walk";
     private const string RandomAttackAnimation = "RandomAttack";
+    private const string DamageAnimation = "Damage";
+    private const string DeathAnimation = "Death";
     
     private Animator _animator;
 
@@ -24,11 +27,26 @@ public class CharacterAnimationController : MonoBehaviour
         _animator.SetBool(WalkAnimation, false);
     }
 
-    public async void RandomAttack()
+    public void RandomAttack()
+    {
+        StartCoroutine(RandomAttackCor());
+    }
+
+    public void Death()
+    {
+        _animator.SetTrigger(DeathAnimation);
+    }
+
+    public void GetDamage()
+    {
+        _animator.SetTrigger(DamageAnimation);
+    }
+
+    private IEnumerator RandomAttackCor()
     {
         int randomValue = Random.Range(0, 3) + 1;
         _animator.SetInteger(RandomAttackAnimation, randomValue);
-        await Task.Delay(100);
+        yield return new WaitForSeconds(0.1f);
         _animator.SetInteger(RandomAttackAnimation, 0);
     }
 }

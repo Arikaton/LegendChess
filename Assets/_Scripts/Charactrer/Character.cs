@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections;
 using _Scripts;
+using _Scripts.Charactrer;
 using _Scripts.Enums;
+using UnityEditor;
 using UnityEngine;
 
 public class Character : MonoBehaviour
@@ -14,8 +17,27 @@ public class Character : MonoBehaviour
     [SerializeField] private Health health;
     [SerializeField] private Attack attack;
 
-    private bool canMove = true;
-    private Vector2Int? moveEndPoint = null;
+    private bool moveEndPointChoosed = false;
+    private bool attackEndPointChoosed = false;
+    public Vector2Int MoveEndPoint { get; private set; }
+    public Vector2Int AttackEndPoint { get; private set; }
+
+    public IEnumerator MoveProcess()
+    {
+        move.PrepareToMove();
+        yield return StartCoroutine(move.DoMoveCor(MoveEndPoint));
+        moveEndPointChoosed = false;
+    }
+
+    public IEnumerator AttackProcess()
+    {
+        yield return StartCoroutine(move.RotateToPosition(AttackEndPoint));
+        
+        var aimCharacter = field.GetCharacterByIndex(AttackEndPoint);
+        if (aimCharacter != null && relationType != aimCharacter.relationType)
+            yield return StartCoroutine(attack.DoAttackCor(aimCharacter));
+        attackEndPointChoosed = false;
+    }
 
     private void Awake()
     {
@@ -26,29 +48,35 @@ public class Character : MonoBehaviour
 
     private void Start()
     {
-        field.SetCeilBusy(move.PositionX, move.PositionY, true);
+        field.SetCeilBusy(move.Position, this);
     }
 
     private void OnClickOnCharacter(Character character)
     {
         if (character != this) return;
-        MoveAction();
+        activeCharacter = this;
+        ChooseAction();
     }
 
-    private void MoveAction()
+    private void ChooseAction()
     {
         if (move.IsMoving) return;
-        if (!canMove) return;
         field.TurnOffFields();
-        if (activeCharacter != this)
+        if (moveEndPointChoosed)
         {
-            field.TurnOnFields(move.MaxMoveDistance, new Vector2Int(move.PositionX, move.PositionY), move.Direction);
-            activeCharacter = this;
+            field.HighlightCeilAndShowEffect(MoveEndPoint, EffectType.Move);
+            if (attackEndPointChoosed)
+            {
+                field.HighlightCeilAndShowEffect(AttackEndPoint, EffectType.Attack);
+            }
+            else
+            {
+                field.TurnOnFields(attack.AttackCeilCount, MoveEndPoint, MoveDirection.Any);
+            }
         }
         else
         {
-            field.TurnOffFields();
-            activeCharacter = null;
+            field.TurnOnFields(move.MaxMoveDistance, new Vector2Int(move.PositionX, move.PositionY), move.moveDirection);
         }
     }
 
@@ -56,12 +84,27 @@ public class Character : MonoBehaviour
     {
         if (activeCharacter is null || activeCharacter != this)
             return;
-        
         if (ceil.IsHighlighted)
         {
-            field.SetCeilBusy(ceil.PositionX, ceil.PositionY, true);
-            field.SetCeilBusy(move.PositionX, move.PositionY, false);
-            moveEndPoint = new Vector2Int(ceil.PositionX, ceil.PositionY);
+            if (attackEndPointChoosed)
+                return;
+            if (moveEndPointChoosed)
+            {
+                if (ceil.Position != MoveEndPoint)
+                {
+                    AttackEndPoint = ceil.Position;
+                    attackEndPointChoosed = true;
+                    MoveManager.Instance.AddToAttackQueue(this);
+                }
+            }
+            else
+            {
+                field.SetCeilBusy(ceil.Position, this);
+                field.SetCeilFree(move.Position);
+                MoveEndPoint = new Vector2Int(ceil.PositionX, ceil.PositionY);
+                MoveManager.Instance.AddToMoveQueue(this);
+                moveEndPointChoosed = true;
+            }
         }
         field.TurnOffFields();
         activeCharacter = null;
