@@ -1,44 +1,32 @@
-﻿using System;
+﻿using LegendChess.Contracts;
 using UnityEngine;
 
-public class PlayerInput : MonoBehaviour
+namespace LegendChess
 {
-    public event Action OnEmptyClick;
-    public event Action<Character> OnClickOnCharacter;
-    public event Action<Ceil> OnClickOnCeil;
-    
-    private Camera _camera;
-
-    private void Start()
+    public class PlayerInput : MonoBehaviour
     {
-        _camera = Camera.main;
-    }
-
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
+        private Camera _camera;
+        private void Start()
         {
-            var ray = _camera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out var hitInfo))
+            _camera = Camera.main;
+        }
+
+        void Update()
+        {
+            if (Input.GetMouseButtonDown(0))
             {
-                var hitTransform = hitInfo.transform;
-                if (hitTransform is null)
+                var ray = _camera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out var hitInfo))
                 {
-                    OnEmptyClick?.Invoke();
-                    return;
-                }
+                    var hitTransform = hitInfo.transform;
+                    if (hitTransform is null)
+                    {
+                        return;
+                    }
 
-                var character = hitTransform.GetComponent<Character>();
-                if (character != null)
-                {
-                    OnClickOnCharacter?.Invoke(character);
-                    return;
-                }
-
-                var ceil = hitTransform.GetComponent<Ceil>();
-                if (ceil != null)
-                {
-                    OnClickOnCeil?.Invoke(ceil);
+                    var interactible = hitTransform.GetComponent<IInteractable>();
+                    if (interactible is null) return;
+                    interactible.OnInteract();
                 }
             }
         }

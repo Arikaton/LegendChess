@@ -482,7 +482,7 @@ PrefabInstance:
     - target: {fileID: 4590311401165422237, guid: 82bafa257ff35604fab30b92b5cfde7c,
         type: 3}
       propertyPath: m_Name
-      value: Enemy Kneht
+      value: Kneht Black
       objectReference: {fileID: 0}
     - target: {fileID: 4590311401165422238, guid: 82bafa257ff35604fab30b92b5cfde7c,
         type: 3}
@@ -542,6 +542,11 @@ PrefabInstance:
     - target: {fileID: 4590311401165422239, guid: 82bafa257ff35604fab30b92b5cfde7c,
         type: 3}
       propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7242130168725821266, guid: 82bafa257ff35604fab30b92b5cfde7c,
+        type: 3}
+      propertyPath: squadType
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7242130168725821266, guid: 82bafa257ff35604fab30b92b5cfde7c,

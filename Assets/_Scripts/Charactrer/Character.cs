@@ -1,122 +1,122 @@
-﻿using System;
-using System.Collections;
-using _Scripts;
-using _Scripts.Charactrer;
-using _Scripts.Enums;
-using UnityEditor;
+﻿using System.Collections;
+using LegendChess.CharacterAttack;
+using LegendChess.Contracts;
+using LegendChess.Enums;
 using UnityEngine;
 
-public class Character : MonoBehaviour
+namespace LegendChess.Charactrer
 {
-    private static Character activeCharacter;
-
-    public RelationType relationType;
-    [SerializeField] private PlayerInput playerInput;
-    [SerializeField] private Field field;
-    [SerializeField] private Move move;
-    [SerializeField] private Health health;
-    [SerializeField] private Attack attack;
-
-    private bool moveEndPointChoosed = false;
-    private bool attackEndPointChoosed = false;
-    public Vector2Int MoveEndPoint { get; private set; }
-    public Vector2Int[] AttackEndPoints { get; private set; }
-
-    public IEnumerator MoveProcess()
+    [RequireComponent(typeof(BaseAttack), typeof(Health), typeof(Move))]
+    public class Character : MonoBehaviour, IInteractable
     {
-        move.PrepareToMove();
-        yield return StartCoroutine(move.DoMoveCor(MoveEndPoint));
-        moveEndPointChoosed = false;
-    }
+        public static Character ActiveCharacter { get; private set; }
 
-    public IEnumerator AttackProcess()
-    {
-        for (var i = 0; i < AttackEndPoints.Length; i++)
-        {
-            yield return StartCoroutine(move.RotateToPosition(AttackEndPoint));
+        [SerializeField] private SquadType squadType;
+        [SerializeField] private GameObject moveSphere = null;
+        private GameManager gameManager;
+        private BaseAttack attack;
+
+        public SquadType SquadType => squadType;
+        public Field Field { get; private set; }
+        public Health Health { get; private set; }
+        public CharacterAnimator CharacterAnimator { get; private set; }
+        public Move Move { get; private set; }
+        public Vector2Int? EndMovePosition { get; private set; }
+
+        private bool isMoving = false;
         
-            var aimCharacter = field.GetCharacterByIndex(AttackEndPoint);
-            if (aimCharacter != null && relationType != aimCharacter.relationType)
-                yield return StartCoroutine(attack.DoAttackCor(aimCharacter));
-            attackEndPointChoosed = false;
-        }
-    }
-
-    private void Awake()
-    {
-        playerInput.OnClickOnCharacter += OnClickOnCharacter;
-        playerInput.OnEmptyClick += OnClickEmpty;
-        playerInput.OnClickOnCeil += OnClickOnCeil;
-    }
-
-    private void Start()
-    {
-        AttackEndPoints = new Vector2Int[attack.AttackCeilCount];
-        field.SetCeilBusy(move.Position, this);
-    }
-
-    private void OnClickOnCharacter(Character character)
-    {
-        if (character != this) return;
-        activeCharacter = this;
-        ChooseAction();
-    }
-
-    private void ChooseAction()
-    {
-        if (move.IsMoving) return;
-        field.TurnOffFields();
-        if (moveEndPointChoosed)
+        private void Awake() => GetReferences();
+        private void Start()
         {
-            field.HighlightCeilAndShowEffect(MoveEndPoint, EffectType.Move);
-            if (attackEndPointChoosed)
+            Field.SetCeilBusy(Move.Position, this);
+        }
+
+        private void GetReferences()
+        {
+            Field = FindObjectOfType<Field>();
+            gameManager = FindObjectOfType<GameManager>();
+            attack = GetComponent<BaseAttack>();
+            Move = GetComponent<Move>();
+            Health = GetComponent<Health>();
+            CharacterAnimator = GetComponent<CharacterAnimator>();
+        }
+
+        public IEnumerator DoMove()
+        {
+            isMoving = true;
+            HideVisual();
+            yield return StartCoroutine(Move.DoMoveCor(EndMovePosition.Value));
+            for (int i = 0; i < attack.TargetsCount; i++)
             {
-                field.HighlightCeilAndShowEffect(AttackEndPoint, EffectType.Attack);
+                yield return StartCoroutine(Move.RotateToPosition(attack.NextTargetPos));
+                yield return StartCoroutine(attack.DoAttack());
+            }
+            attack.Reset();
+            EndMovePosition = null;
+            isMoving = false;
+        }
+
+        public void OnInteract()
+        {
+            if (isMoving) return;
+            ActiveCharacter?.HideVisual();
+            ActiveCharacter = this;
+            UpdateVisual();
+        }
+
+        private void UpdateVisual()
+        {
+            Field.TurnOffFields();
+            if (EndMovePosition == null)
+            {
+                HighlightMove();
             }
             else
             {
-                field.TurnOnFields(attack.AttackCeilCount, MoveEndPoint, MoveDirection.Any);
+                ShowEndMovePos();
+                attack.ShowVisual(EndMovePosition.Value);
             }
         }
-        else
-        {
-            field.TurnOnFields(move.MaxMoveDistance, new Vector2Int(move.PositionX, move.PositionY), move.moveDirection);
-        }
-    }
 
-    private void OnClickOnCeil(Ceil ceil)
-    {
-        if (activeCharacter is null || activeCharacter != this)
-            return;
-        if (ceil.IsHighlighted)
+        private void HighlightMove()
         {
-            if (attackEndPointChoosed)
+            Field.TurnOnFields(Move.Position, Move.highlightType, Move.MaxMoveDistance);
+        }
+
+        private void HideVisual()
+        {
+            moveSphere.SetActive(false);
+            attack.HideAttack();
+        }
+
+        private void ShowEndMovePos()
+        {
+            moveSphere.SetActive(true);
+            moveSphere.transform.position = new Vector3(EndMovePosition.Value.x, transform.position.y, EndMovePosition.Value.y);
+        }
+
+        public void OnTapOnCeil(Ceil ceil)
+        {
+            if (isMoving) return;
+            if (ceil is null)
+            {
+                Field.TurnOffFields();
+                HideVisual();
+                ActiveCharacter = null;
                 return;
-            if (moveEndPointChoosed)
+            }
+            if (EndMovePosition == null)
             {
-                if (ceil.Position != MoveEndPoint)
-                {
-                    AttackEndPoint = ceil.Position;
-                    attackEndPointChoosed = true;
-                    MoveManager.Instance.AddToAttackQueue(this);
-                }
+                Field.SetCeilFree(Move.Position);
+                Field.SetCeilBusy(ceil.Position, this);
+                EndMovePosition = ceil.Position;
+                gameManager.AddCharacterToQueue(this);
             }
             else
             {
-                field.SetCeilBusy(ceil.Position, this);
-                field.SetCeilFree(move.Position);
-                MoveEndPoint = new Vector2Int(ceil.PositionX, ceil.PositionY);
-                MoveManager.Instance.AddToMoveQueue(this);
-                moveEndPointChoosed = true;
+                attack.ProcessTapOnCeil(ceil);
             }
+            UpdateVisual();
         }
-        field.TurnOffFields();
-        activeCharacter = null;
-    }
-    
-    private void OnClickEmpty()
-    {
-        field.TurnOffFields();
-        activeCharacter = null;
     }
 }

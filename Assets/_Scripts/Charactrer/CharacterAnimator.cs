@@ -1,7 +1,5 @@
 ﻿using System.Collections;
-using System.Threading.Tasks;
 using UnityEngine;
-
 
 public class CharacterAnimationController : MonoBehaviour
 {
@@ -27,11 +25,6 @@ public class CharacterAnimationController : MonoBehaviour
         _animator.SetBool(WalkAnimation, false);
     }
 
-    public void RandomAttack()
-    {
-        StartCoroutine(RandomAttackCor());
-    }
-
     public void Death()
     {
         _animator.SetTrigger(DeathAnimation);
@@ -42,7 +35,7 @@ public class CharacterAnimationController : MonoBehaviour
         _animator.SetTrigger(DamageAnimation);
     }
 
-    private IEnumerator RandomAttackCor()
+    public IEnumerator RandomAttackCor()
     {
         int randomValue = Random.Range(0, 3) + 1;
         _animator.SetInteger(RandomAttackAnimation, randomValue);
