@@ -1,9 +1,8 @@
-using System;
 using System.Collections;
-using _Scripts.Enums;
+using LegendChess.Enums;
 using UnityEngine;
 
-namespace _Scripts
+namespace LegendChess.CharacterAttack
 {
     public class KnehtAttack : BaseAttack
     {
@@ -14,22 +13,22 @@ namespace _Scripts
         
         public override IEnumerator DoAttack()
         {
-            yield return StartCoroutine(Character.CharAnimController.RandomAttackCor());
             var character = Character.Field.GetCharacterByIndex(targetPositions.Dequeue());
             if (character != null && character.SquadType != Character.SquadType)
             {
+                yield return StartCoroutine(Character.CharacterAnimator.RandomAttackCor());
                 character.Health.GetDamage(damage);
             }
         }
 
-        public override void HighlightAttack(Vector2Int endMovePos)
+        protected override void HighlightPossibleAttackCells(Vector2Int endMovePos)
         {
-            if (!IsComplete)
-                Character.Field.TurnOnFields(endMovePos, highlightType);
-            else
-            {
-                Character.Field.HighlightCeil(NextTargetPos);
-            }
+            Character.Field.TurnOnFields(endMovePos, highlightType);
+        }
+
+        protected override void HighLightSelectedAttackCells()
+        {
+            Character.Field.HighlightCeil(NextTargetPos);
         }
 
         public override void HideAttack()

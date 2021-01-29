@@ -1,10 +1,12 @@
-namespace _Scripts.Enums
+namespace LegendChess.Enums
 {
-    public enum MoveDirection
+    public enum HighlightType
     {
         Straight, 
         Diagonally, 
         Asterisk,
-        Any
+        Any,
+        AnyExceptMiddle,
+        AnyExceptFriendly
     }
 }

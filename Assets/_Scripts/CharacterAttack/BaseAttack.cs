@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using _Scripts.Enums;
+using LegendChess.Charactrer;
+using LegendChess.Enums;
 using UnityEngine;
 
-namespace _Scripts
+namespace LegendChess.CharacterAttack
 {
     public abstract class BaseAttack : MonoBehaviour
     {
@@ -28,8 +29,17 @@ namespace _Scripts
                 targetPositions.Enqueue(position);
         }
 
-        public abstract void HighlightAttack(Vector2Int endMovePos);
+        protected abstract void HighlightPossibleAttackCells(Vector2Int endMovePos);
+        protected abstract void HighLightSelectedAttackCells();
         public abstract void HideAttack();
+
+        public void ShowVisual(Vector2Int endMovePos)
+        {
+            if (IsComplete)
+                HighLightSelectedAttackCells();
+            else
+                HighlightPossibleAttackCells(endMovePos);
+        }
 
         public abstract void ProcessTapOnCeil(Ceil ceil);
 

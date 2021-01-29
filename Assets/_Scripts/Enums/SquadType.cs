@@ -1,8 +1,9 @@
-﻿namespace _Scripts.Enums
+﻿namespace LegendChess.Enums
 {
-    public enum RelationType
+    public enum SquadType
     {
-        Enemy,
-        Friend
+        Black,
+        White,
+        NotMatter
     }
 }

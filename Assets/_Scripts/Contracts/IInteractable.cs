@@ -1,7 +1,7 @@
-namespace _Scripts.Contracts
+namespace LegendChess.Contracts
 {
-    public interface IInteractible
+    public interface IInteractable
     {
-        
+        void OnInteract();
     }
 }
