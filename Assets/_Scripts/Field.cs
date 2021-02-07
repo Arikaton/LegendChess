@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using LegendChess.Charactrer;
 using LegendChess.Enums;
 using UnityEngine;
 
@@ -10,88 +9,90 @@ namespace LegendChess
     {
         [SerializeField] private int horizontalSize;
         [SerializeField] private int verticalSize;
-        [SerializeField] private Transform fieldsContainer;
-
-        private List<Ceil> fields;
-        private List<Ceil> HighlightedFields { get; set; }
-
-        private Ceil[,] fieldsMatrix;
+        private List<Cell> HighlightedFields { get; } = new List<Cell>();
+        private Cell[,] cells;
 
         private void Awake()
         {
-            Init();
-            DefineFieldsMatrix();
+            DefineCellsMatrix();
         }
-    
-        private void Init()
+
+        public void HighlightCell(Vector2Int position)
         {
-            HighlightedFields = new List<Ceil>();
-            fields = new List<Ceil>(fieldsContainer.childCount);
-            foreach (var field in fieldsContainer.GetComponentsInChildren<Ceil>())
-            {
-                fields.Add(field);
-            }
+            if (!CellExist(position.x, position.y)) return;
+            var cell = cells[position.x, position.y];
+            HighlightedFields.Add(cell);
+            cell.TurnOn();
         }
 
-        private void DefineFieldsMatrix()
+        public void HighlightCells(HighlightType highlightType, Vector2Int position, int lenght = 1,
+            SquadType squadType = SquadType.NotMatter)
         {
-            fieldsMatrix = new Ceil[horizontalSize, verticalSize];
-            foreach (var field in fields)
-            {
-                fieldsMatrix[field.PositionX, field.PositionY] = field;
-            }
+            GetCellsToHighlight(highlightType, position, lenght, squadType);
+            HighlightedFields.ForEach(cell => cell.TurnOn());
         }
 
-        public void HighlightCeil(Vector2Int position)
+        public void SetCellBusy(Vector2Int position, GameObject placeHolder, SquadType squadType)
         {
-            if (!CeilExist(position.x, position.y)) return;
-            var ceil = fieldsMatrix[position.x, position.y];
-            HighlightedFields.Add(ceil);
-            ceil.TurnOn();
+            var cell = cells[position.x, position.y];
+            cell.PlaceHolder = placeHolder;
+            cell.SquadType = squadType;
         }
 
-        public void TurnOnFields(Vector2Int startPos, HighlightType highlightType, int lenght = 1, SquadType squadType = SquadType.NotMatter)
+        public void SetCellFree(Vector2Int position)
         {
-            GetPossibleFields(lenght, startPos, highlightType, squadType);
-            HighlightedFields.ForEach(field => field.TurnOn());
+            var cell = cells[position.x, position.y];
+            cell.PlaceHolder = null;
+            cell.SquadType = SquadType.NotMatter;
+
         }
 
-        public void SetCeilBusy(Vector2Int position, Character character)
-        {
-            fieldsMatrix[position.x, position.y].Character = character;
-        }
-    
-        public void SetCeilFree(Vector2Int position)
-        {
-            fieldsMatrix[position.x, position.y].Character = null;
-        }
+        public bool IsCellHaveCharacter(Vector2Int index) => cells[index.x, index.y].IsBusy;
+        
+        public GameObject GetGameObjectByIndex(Vector2Int index) => cells[index.x, index.y].PlaceHolder;
+        
+        public T GetGameObjectByIndex<T>(Vector2Int index) => cells[index.x, index.y].PlaceHolder.GetComponent<T>();
 
-        public bool GetCeilBusyState(Vector2Int index) => fieldsMatrix[index.x, index.y].IsBusy;
+        public SquadType GetSquadTypeByIndex(Vector2Int index) => cells[index.x, index.y].SquadType;
 
-        public Character GetCharacterByIndex(Vector2Int index) => fieldsMatrix[index.x, index.y].Character;
-
-        public void TurnOffFields()
+        public void TurnOffCells()
         {
             HighlightedFields.ForEach(field => field.TurnOff());
             HighlightedFields.Clear();
         }
 
-        private void GetPossibleFields(int maxDistance, Vector2Int position, HighlightType moveType, SquadType squadType)
+        private void DefineCellsMatrix()
         {
-            switch (moveType)
+            var cellsArray = GetComponentsInChildren<Cell>();
+            cells = new Cell[horizontalSize, verticalSize];
+            foreach (var cell in cellsArray)
+            {
+                if (cell.Position.x >= horizontalSize || cell.Position.y >= verticalSize)
+                {
+                    cell.gameObject.SetActive(false);
+                    continue;
+                }
+                cells[cell.PositionX, cell.PositionY] = cell;
+            }
+        }
+
+        private void GetCellsToHighlight(HighlightType highlightType, Vector2Int position, int maxDistance, 
+            SquadType squadType)
+        {
+            switch (highlightType)
             {
                 case HighlightType.Straight:
-                    StraightPass(maxDistance, position);
-                    AddCeilToHighlighted(position);
+                    StraightPass(maxDistance, position, squadType);
+                    AddCellToHighlighted(position);
                     break;
                 case HighlightType.Diagonally:
-                    DiagonallyPass(maxDistance, position);
-                    AddCeilToHighlighted(position);
+                    DiagonallyPass(maxDistance, position, squadType);
+                    AddCellToHighlighted(position);
                     break;
                 case HighlightType.Asterisk:
-                    StraightPass(maxDistance, position);
-                    DiagonallyPass(maxDistance, position);
-                    AddCeilToHighlighted(position);
+                    StraightPass(maxDistance, position, squadType);
+                    DiagonallyPass(maxDistance, position, squadType);
+                    AddCellToHighlighted(position);
                     break;
                 case HighlightType.Any:
                     SimplePass(maxDistance, position);
@@ -100,18 +101,19 @@ namespace LegendChess
                     SimplePass(maxDistance, position);
                     break;
                 case HighlightType.AnyExceptFriendly:
+                    SimplePass(maxDistance, position, false, squadType);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(moveType), moveType, null);
+                    throw new ArgumentOutOfRangeException(nameof(highlightType), highlightType, null);
             }
         }
 
-        private void AddCeilToHighlighted(Vector2Int position)
+        private void AddCellToHighlighted(Vector2Int position)
         {
-            HighlightedFields.Add(fieldsMatrix[position.x, position.y]);
+            HighlightedFields.Add(cells[position.x, position.y]);
         }
-
-        private void SimplePass(int maxDistance, Vector2Int position, bool addMiddle = false)
+        
+        private void SimplePass(int maxDistance, Vector2Int position, bool addMiddle = false, SquadType squadType = SquadType.NotMatter)
         {
             for (int i = position.x - maxDistance; i <= position.x + maxDistance; i++)
             {
@@ -119,108 +121,106 @@ namespace LegendChess
                 {
                     if (i == position.x && j == position.y && !addMiddle)
                         continue;
-                    if (CeilExist(i, j))
+                    if (squadType != SquadType.NotMatter)
                     {
-                        HighlightedFields.Add(fieldsMatrix[i, j]);
+                        if (CellNotSameSquad(i, j, squadType))
+                            HighlightedFields.Add(cells[i, j]);
+                    }
+                    else
+                    {
+                        if (CellExist(i, j))
+                            HighlightedFields.Add(cells[i, j]);
                     }
                 }
             }
         }
-    
-        private void DiagonallyPass(int maxDistance, Vector2Int position)
+        
+        private void DiagonallyPass(int maxDistance, Vector2Int position, SquadType squadType)
         {
             var currentX = position.x + 1;
             var currentY = position.y + 1;
-            while (CeilExistAndNotBusy(currentX, currentY) && (currentX - position.x) <= maxDistance)
+            while (CellNotSameSquad(currentX, currentY, squadType) && (currentX - position.x) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[currentX, currentY]);
+                HighlightedFields.Add(cells[currentX, currentY]);
                 currentX++;
                 currentY++;
             }
 
             currentX = position.x - 1;
             currentY = position.y + 1;
-            while (CeilExistAndNotBusy(currentX, currentY) && (position.x - currentX) <= maxDistance)
+            while (CellNotSameSquad(currentX, currentY, squadType) && (position.x - currentX) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[currentX, currentY]);
+                HighlightedFields.Add(cells[currentX, currentY]);
                 currentX--;
                 currentY++;
             }
 
             currentX = position.x + 1;
             currentY = position.y - 1;
-            while (CeilExistAndNotBusy(currentX, currentY) && (currentX - position.x) <= maxDistance)
+            while (CellNotSameSquad(currentX, currentY, squadType) && (currentX - position.x) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[currentX, currentY]);
+                HighlightedFields.Add(cells[currentX, currentY]);
                 currentX++;
                 currentY--;
             }
 
             currentX = position.x - 1;
             currentY = position.y - 1;
-            while (CeilExistAndNotBusy(currentX, currentY) && (position.x - currentX) <= maxDistance)
+            while (CellNotSameSquad(currentX, currentY, squadType) && (position.x - currentX) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[currentX, currentY]);
+                HighlightedFields.Add(cells[currentX, currentY]);
                 currentX--;
                 currentY--;
             }
         }
-
-        private void StraightPass(int maxDistance, Vector2Int position)
+        
+        private void StraightPass(int maxDistance, Vector2Int position, SquadType squadType)
         {
             var currentXPos = position.x + 1;
-            while (CeilExistAndNotBusy(currentXPos, position.y) && (currentXPos - position.x) <= maxDistance)
+            while (CellNotSameSquad(currentXPos, position.y, squadType) && (currentXPos - position.x) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[currentXPos, position.y]);
+                HighlightedFields.Add(cells[currentXPos, position.y]);
                 currentXPos++;
             }
 
             currentXPos = position.x - 1;
-            while (CeilExistAndNotBusy(currentXPos, position.y) && (position.x - currentXPos) <= maxDistance)
+            while (CellNotSameSquad(currentXPos, position.y, squadType) && (position.x - currentXPos) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[currentXPos, position.y]);
+                HighlightedFields.Add(cells[currentXPos, position.y]);
                 currentXPos--;
             }
 
             var currentYPos = position.y + 1;
-            while (CeilExistAndNotBusy(position.x, currentYPos) && (currentYPos - position.y) <= maxDistance)
+            while (CellNotSameSquad(position.x, currentYPos, squadType) && (currentYPos - position.y) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[position.x, currentYPos]);
+                HighlightedFields.Add(cells[position.x, currentYPos]);
                 currentYPos++;
             }
 
             currentYPos = position.y - 1;
-            while (CeilExistAndNotBusy(position.x, currentYPos) && (position.y - currentYPos) <= maxDistance)
+            while (CellNotSameSquad(position.x, currentYPos, squadType) && (position.y - currentYPos) <= maxDistance)
             {
-                HighlightedFields.Add(fieldsMatrix[position.x, currentYPos]);
+                HighlightedFields.Add(cells[position.x, currentYPos]);
                 currentYPos--;
             }
         }
-
-        private bool CeilExistAndNotBusy(int i, int j)
+        
+        public bool CellNotBusy(int i, int j)
         {
-            if (!CeilExist(i, j))
+            if (!CellExist(i, j))
                 return false;
-            if (GetCeilBusyState(new Vector2Int(i, j)))
-                return false;
-            return true;
+            return !IsCellHaveCharacter(new Vector2Int(i, j));
         }
-
-        private bool CeilExistAndNotFriendly(int i, int j, SquadType squadType)
+        
+        public bool CellNotSameSquad(int i, int j, SquadType squadType)
         {
-            var character = GetCharacterByIndex(new Vector2Int(i, j));
-            if (!CeilExist(i, j))
+            if (!CellExist(i, j))
                 return false;
-            if (character is null)
-                return true;
-            if (squadType == SquadType.NotMatter)
-                return true;
-            if (character.SquadType == squadType)
-                return false;
-            return true;
+            var otherSquadType = GetSquadTypeByIndex(new Vector2Int(i, j));
+            return otherSquadType != squadType;
         }
-
-        private bool CeilExist(int i, int j)
+        
+        public bool CellExist(int i, int j)
         {
             if (i >= horizontalSize || i < 0)
                 return false;
@@ -228,6 +228,5 @@ namespace LegendChess
                 return false;
             return true;
         }
-    
     }
 }

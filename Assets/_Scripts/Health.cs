@@ -1,5 +1,4 @@
-﻿using System;
-using LegendChess.Charactrer;
+﻿using LegendChess.Charactrer;
 using UnityEngine;
 
 namespace LegendChess
@@ -8,20 +7,19 @@ namespace LegendChess
     {
         [SerializeField] private int healthPoints;
         private CharacterAnimator characterAnimator;
+        private StepHandler stepHandler;
 
         private void Awake()
         {
             characterAnimator = GetComponent<CharacterAnimator>();
+            stepHandler = FindObjectOfType<StepHandler>();
         }
 
         public void GetDamage(int damage)
         {
-            characterAnimator.GetDamage();
             healthPoints -= damage;
-            if (healthPoints <= 0)
-            {
-                Death();
-            }
+            characterAnimator.GetDamage();
+            stepHandler.AddDamagedCharacter(this);
         }
 
         public void GetHealth(int health)
@@ -31,6 +29,7 @@ namespace LegendChess
 
         public void Death()
         {
+            if (healthPoints > 0) return;
             characterAnimator.Death();
             Destroy(gameObject, 1f);
         }

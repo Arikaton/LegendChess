@@ -7,116 +7,129 @@ using UnityEngine;
 namespace LegendChess.Charactrer
 {
     [RequireComponent(typeof(BaseAttack), typeof(Health), typeof(Move))]
-    public class Character : MonoBehaviour, IInteractable
+    public class Character : MonoBehaviour, IInteractible
     {
         public static Character ActiveCharacter { get; private set; }
 
         [SerializeField] private SquadType squadType;
-        [SerializeField] private GameObject moveSphere = null;
-        private GameManager gameManager;
+        [SerializeField] private GameObject moveVFX;
+        private StepHandler stepHandler;
         private BaseAttack attack;
 
+        private Field field;
+        private Health health;
+        private Move move;
         public SquadType SquadType => squadType;
-        public Field Field { get; private set; }
-        public Health Health { get; private set; }
-        public CharacterAnimator CharacterAnimator { get; private set; }
-        public Move Move { get; private set; }
-        public Vector2Int? EndMovePosition { get; private set; }
+        public Vector2Int? FinishMovePosition { get; set; }
 
-        private bool isMoving = false;
-        
         private void Awake() => GetReferences();
+        
         private void Start()
         {
-            Field.SetCeilBusy(Move.Position, this);
+            field.SetCellBusy(move.Position, gameObject, squadType);
         }
 
-        private void GetReferences()
+        public IEnumerator Move()
         {
-            Field = FindObjectOfType<Field>();
-            gameManager = FindObjectOfType<GameManager>();
-            attack = GetComponent<BaseAttack>();
-            Move = GetComponent<Move>();
-            Health = GetComponent<Health>();
-            CharacterAnimator = GetComponent<CharacterAnimator>();
-        }
-
-        public IEnumerator DoMove()
-        {
-            isMoving = true;
             HideVisual();
-            yield return StartCoroutine(Move.DoMoveCor(EndMovePosition.Value));
-            for (int i = 0; i < attack.TargetsCount; i++)
-            {
-                yield return StartCoroutine(Move.RotateToPosition(attack.NextTargetPos));
-                yield return StartCoroutine(attack.DoAttack());
-            }
-            attack.Reset();
-            EndMovePosition = null;
-            isMoving = false;
+            yield return StartCoroutine(move.MoveAction(FinishMovePosition.Value, this));
+            FinishMovePosition = null;
         }
 
-        public void OnInteract()
+        public IEnumerator Attack()
         {
-            if (isMoving) return;
+            yield return StartCoroutine(attack.Attack());
+        }
+
+        public void OnCollision(Vector2Int nextStep)
+        {
+            var otherCharacter = field.GetGameObjectByIndex<Character>(nextStep);
+            if (otherCharacter is null) return;
+            if (otherCharacter.SquadType == squadType) return;
+            attack.AddCollisionTarget(otherCharacter.health);
+            otherCharacter.attack.AddCollisionTarget(health);
+            otherCharacter.Stop();
+        }
+
+        public void OnInteract(SquadType interactorSquadType)
+        {
+            if (squadType != interactorSquadType) return;
             ActiveCharacter?.HideVisual();
             ActiveCharacter = this;
             UpdateVisual();
         }
 
+        public void OnTapOnCeil(Cell cell)
+        {
+            if (cell is null)
+            {
+                Reset();
+                return;
+            }
+            if (FinishMovePosition == null)
+            {
+                if (stepHandler.IsFull) return;
+                FinishMovePosition = cell.Position;
+                stepHandler.AddCharacter(this);
+            }
+            else
+            {
+                attack.ProcessTapOnCeil(cell);
+            }
+            UpdateVisual();
+        }
+
         private void UpdateVisual()
         {
-            Field.TurnOffFields();
-            if (EndMovePosition == null)
+            field.TurnOffCells();
+            if (FinishMovePosition == null)
             {
-                HighlightMove();
+                move.HighlightPossible(squadType);
             }
             else
             {
                 ShowEndMovePos();
-                attack.ShowVisual(EndMovePosition.Value);
+                attack.ShowVisual(FinishMovePosition.Value);
             }
         }
 
-        private void HighlightMove()
+        public void HideVisual()
         {
-            Field.TurnOnFields(Move.Position, Move.highlightType, Move.MaxMoveDistance);
+            moveVFX.SetActive(false);
+            attack.HideAttack();
+            field.TurnOffCells();
         }
 
-        private void HideVisual()
+        private void Stop()
         {
-            moveSphere.SetActive(false);
-            attack.HideAttack();
+            move.Stop();
+        }
+
+        private void OnDestroy()
+        {
+            field.SetCellFree(move.Position);
         }
 
         private void ShowEndMovePos()
         {
-            moveSphere.SetActive(true);
-            moveSphere.transform.position = new Vector3(EndMovePosition.Value.x, transform.position.y, EndMovePosition.Value.y);
+            moveVFX.SetActive(true);
+            moveVFX.transform.position = new Vector3(FinishMovePosition.Value.x, transform.position.y, FinishMovePosition.Value.y);
         }
 
-        public void OnTapOnCeil(Ceil ceil)
+        private void GetReferences()
         {
-            if (isMoving) return;
-            if (ceil is null)
-            {
-                Field.TurnOffFields();
-                HideVisual();
-                ActiveCharacter = null;
-                return;
-            }
-            if (EndMovePosition == null)
-            {
-                Field.SetCeilFree(Move.Position);
-                Field.SetCeilBusy(ceil.Position, this);
-                EndMovePosition = ceil.Position;
-                gameManager.AddCharacterToQueue(this);
-            }
-            else
-            {
-                attack.ProcessTapOnCeil(ceil);
-            }
-            UpdateVisual();
+            field = FindObjectOfType<Field>();
+            stepHandler = FindObjectOfType<StepHandler>();
+            attack = GetComponent<BaseAttack>();
+            move = GetComponent<Move>();
+            health = GetComponent<Health>();
+            attack.SetSquadType(squadType);
+        }
+
+        private void Reset()
+        {
+            HideVisual();
+            ActiveCharacter = null;
         }
     }
 }

@@ -9,20 +9,22 @@ namespace LegendChess.CharacterAttack
 
         protected override void HighLightSelectedAttackCells()
         {
-            foreach (var target in targetPositions.ToArray())
+            foreach (var target in TargetPositions.ToArray())
             {
-                Character.Field.HighlightCeil(target);
+                Field.HighlightCell(target);
             }
         }
 
         protected override void HighlightPossibleAttackCells(Vector2Int endMovePos)
         {
-            if (targetPositions.Count == 0)
+            if (TargetPositions.Count == 0)
             {
-                Character.Field.TurnOnFields(endMovePos, HighlightType.AnyExceptMiddle);
+                Field.HighlightCells(HighlightType.AnyExceptMiddle, endMovePos);
+                
             }
             else
             {
+                Debug.Log("Highlight Second");
                 HighlightSecondTargetPos(endMovePos);
             }
         }
@@ -36,7 +38,7 @@ namespace LegendChess.CharacterAttack
                     var point = new Vector2Int(i, j);
                     if (GetDistance(NextTargetPos, point) < 2 &&
                         endMovePos != point)
-                        Character.Field.HighlightCeil(point);
+                        Field.HighlightCell(point);
                 }
             }
         }

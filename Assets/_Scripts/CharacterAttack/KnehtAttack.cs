@@ -6,45 +6,47 @@ namespace LegendChess.CharacterAttack
 {
     public class KnehtAttack : BaseAttack
     {
-        private void Start()
+        protected override IEnumerator MainAttack()
         {
-            highlightType = HighlightType.AnyExceptMiddle;
-        }
-        
-        public override IEnumerator DoAttack()
-        {
-            var character = Character.Field.GetCharacterByIndex(targetPositions.Dequeue());
-            if (character != null && character.SquadType != Character.SquadType)
+            if (TargetPositions.Count == 0) yield break;
+            while (TargetPositions.Count > 0)
             {
-                yield return StartCoroutine(Character.CharacterAnimator.RandomAttackCor());
-                character.Health.GetDamage(damage);
+                var targetPos = TargetPositions.Dequeue();
+                var targetSquadType = Field.GetSquadTypeByIndex(targetPos);
+                if (targetSquadType == SquadType.NotMatter) yield break;
+                if (targetSquadType == SquadType) yield break;
+                yield return StartCoroutine(Move.RotateToPosition(targetPos));
+                yield return StartCoroutine(CharacterAnimator.RandomAttackCor());
+                var health = Field.GetGameObjectByIndex<Health>(targetPos);
+                health.GetDamage(damage);
             }
         }
 
         protected override void HighlightPossibleAttackCells(Vector2Int endMovePos)
         {
-            Character.Field.TurnOnFields(endMovePos, highlightType);
+            Field.HighlightCells(highlightType, endMovePos, 1, SquadType);
         }
 
         protected override void HighLightSelectedAttackCells()
         {
-            Character.Field.HighlightCeil(NextTargetPos);
+            Field.HighlightCell(NextTargetPos);
         }
 
         public override void HideAttack()
         {
-            Character.Field.TurnOffFields();
+            Field.TurnOffCells();
         }
 
-        public override void ProcessTapOnCeil(Ceil ceil)
+        public override void ProcessTapOnCeil(Cell cell)
         {
             if (IsComplete) return;
-            AddTarget(ceil.Position);
+            AddTarget(cell.Position);
         }
 
-        public override void Reset()
+        protected override void Reset()
         {
-            targetPositions.Clear();
+            TargetPositions.Clear();
+            CollisionEnemyHealth = null;
         }
     }
 }

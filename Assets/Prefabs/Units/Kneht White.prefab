@@ -64,7 +64,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ebe9c13b6e6f40aaaec36b9616dff64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  highlightType: 0
+  highlightType: 2
   maxMoveDistance: 1
   rotationTime: 0.5
   speed: 2
@@ -93,7 +93,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   squadType: 1
-  moveSphere: {fileID: 1630460451325835969}
+  moveVFX: {fileID: 1630460451325835969}
 --- !u!114 &2241031744315051760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -119,8 +119,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d570596cea743e99ef4d651aa9dac74, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 1
   targetsCount: 1
+  damage: 1
+  highlightType: 4
 --- !u!1001 &2965752878967005935
 PrefabInstance:
   m_ObjectHideFlags: 0
