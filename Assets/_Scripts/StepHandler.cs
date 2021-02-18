@@ -1,10 +1,8 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using LegendChess.Charactrer;
 using LegendChess.Enums;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace LegendChess
 {
@@ -13,9 +11,21 @@ namespace LegendChess
         [SerializeField] private int maxCharacterPerMove = 1;
         private List<Character> characters = new List<Character>();
         private List<Health> damagedCharacters = new List<Health>();
-        public bool IsFull => characters.Count == maxCharacterPerMove;
+        private int blackTeamStepCount;
+        private int whiteTeamStepCount;
 
-        public void AddCharacter(Character character) => characters.Add(character);
+        public bool IsBlackFull => blackTeamStepCount == maxCharacterPerMove;
+        public bool IsWhiteFull => whiteTeamStepCount == maxCharacterPerMove; 
+
+        public void AddCharacter(Character character)
+        {
+            if (character.SquadType == SquadType.Black)
+                blackTeamStepCount++;
+            else
+                whiteTeamStepCount++;
+            characters.Add(character);
+        }
+
         public void AddDamagedCharacter(Health health) => damagedCharacters.Add(health);
 
         public IEnumerator StepCor()
@@ -41,12 +51,14 @@ namespace LegendChess
             foreach (var character in characters)
             {
                 yield return StartCoroutine(character.Attack());
-                yield return new WaitForSeconds(1f);
+                yield return new WaitForSeconds(0.5f);
             }
         }
 
         private void Reset()
         {
+            whiteTeamStepCount = 0;
+            blackTeamStepCount = 0;
             characters = new List<Character>();
             damagedCharacters = new List<Health>();
         }

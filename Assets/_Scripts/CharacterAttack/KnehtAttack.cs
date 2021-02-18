@@ -13,12 +13,13 @@ namespace LegendChess.CharacterAttack
             {
                 var targetPos = TargetPositions.Dequeue();
                 var targetSquadType = Field.GetSquadTypeByIndex(targetPos);
-                if (targetSquadType == SquadType.NotMatter) yield break;
-                if (targetSquadType == SquadType) yield break;
+                if (targetSquadType == SquadType.NotMatter) continue;
+                if (targetSquadType == SquadType) continue;
                 yield return StartCoroutine(Move.RotateToPosition(targetPos));
                 yield return StartCoroutine(CharacterAnimator.RandomAttackCor());
-                var health = Field.GetGameObjectByIndex<Health>(targetPos);
-                health.GetDamage(damage);
+                var enemyHealth = Field.GetGameObjectByIndex<Health>(targetPos);
+                enemyHealth.GetDamage(damage);
+                yield return new WaitForSeconds(0.5f);
             }
         }
 
@@ -37,7 +38,7 @@ namespace LegendChess.CharacterAttack
             Field.TurnOffCells();
         }
 
-        public override void ProcessTapOnCeil(Cell cell)
+        public override void ProcessTapOnCeil(Cell cell, Vector2Int finishMovePos)
         {
             if (IsComplete) return;
             AddTarget(cell.Position);

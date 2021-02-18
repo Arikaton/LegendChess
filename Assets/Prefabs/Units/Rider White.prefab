@@ -1939,7 +1939,7 @@ CapsuleCollider:
   m_GameObject: {fileID: 6560229931701363892}
   m_Material: {fileID: 0}
   m_IsTrigger: 0
-  m_Enabled: 1
+  m_Enabled: 0
   m_Radius: 0.3
   m_Height: 1.8
   m_Direction: 1
@@ -2011,8 +2011,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5691348446aa4a7cadb7d633f8ac45d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 1
   targetsCount: 2
+  damage: 1
+  highlightType: 4
 --- !u!1 &6560620403951627333
 GameObject:
   m_ObjectHideFlags: 0

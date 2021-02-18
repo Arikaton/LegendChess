@@ -76,7 +76,7 @@ namespace LegendChess.CharacterAttack
         }
 
         public abstract void HideAttack();
-        public abstract void ProcessTapOnCeil(Cell cell);
+        public abstract void ProcessTapOnCeil(Cell cell, Vector2Int finishMovePos);
         protected abstract void HighlightPossibleAttackCells(Vector2Int endMovePos);
         protected abstract void HighLightSelectedAttackCells();
         protected abstract void Reset();

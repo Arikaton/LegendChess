@@ -20,11 +20,9 @@ namespace LegendChess.CharacterAttack
             if (TargetPositions.Count == 0)
             {
                 Field.HighlightCells(HighlightType.AnyExceptMiddle, endMovePos);
-                
             }
             else
             {
-                Debug.Log("Highlight Second");
                 HighlightSecondTargetPos(endMovePos);
             }
         }

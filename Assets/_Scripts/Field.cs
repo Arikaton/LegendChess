@@ -51,9 +51,19 @@ namespace LegendChess
         
         public GameObject GetGameObjectByIndex(Vector2Int index) => cells[index.x, index.y].PlaceHolder;
         
-        public T GetGameObjectByIndex<T>(Vector2Int index) => cells[index.x, index.y].PlaceHolder.GetComponent<T>();
+        public T GetGameObjectByIndex<T>(Vector2Int index)
+        {
+            if (!CellExist(index.x, index.y)) return default;
+            if (cells[index.x, index.y].PlaceHolder is null) return default;
+            return cells[index.x, index.y].PlaceHolder.GetComponent<T>();
+        }
 
-        public SquadType GetSquadTypeByIndex(Vector2Int index) => cells[index.x, index.y].SquadType;
+        public SquadType GetSquadTypeByIndex(Vector2Int index)
+        {
+            if (!CellExist(index.x, index.y))
+                return SquadType.NotMatter;
+            return cells[index.x, index.y].SquadType;
+        }
 
         public void TurnOffCells()
         {

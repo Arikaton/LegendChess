@@ -68,15 +68,22 @@ namespace LegendChess.Charactrer
             }
             if (FinishMovePosition == null)
             {
-                if (stepHandler.IsFull) return;
+                if (!CanMove()) return;
                 FinishMovePosition = cell.Position;
                 stepHandler.AddCharacter(this);
             }
             else
             {
-                attack.ProcessTapOnCeil(cell);
+                attack.ProcessTapOnCeil(cell, FinishMovePosition.Value);
             }
             UpdateVisual();
+        }
+
+        private bool CanMove()
+        {
+            if (SquadType == SquadType.Black && stepHandler.IsBlackFull)
+                return false;
+            return SquadType != SquadType.White || !stepHandler.IsWhiteFull;
         }
 
         private void UpdateVisual()
@@ -107,6 +114,8 @@ namespace LegendChess.Charactrer
 
         private void OnDestroy()
         {
+            if (ActiveCharacter == this)
+                ActiveCharacter = null;
             field.SetCellFree(move.Position);
         }
 

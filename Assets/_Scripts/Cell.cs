@@ -55,8 +55,20 @@ namespace LegendChess
 
         public void OnInteract(SquadType interactorSquadType)
         {
-            Debug.Log(Position + " " + IsBusy);
-            Character.ActiveCharacter?.OnTapOnCeil(IsHighlighted ? this : null);
+            if (PlaceHolder is null)
+                Character.ActiveCharacter?.OnTapOnCeil(IsHighlighted ? this : null);
+            else
+            {
+                var character = PlaceHolder.GetComponent<Character>();
+                if (Character.ActiveCharacter is null)
+                {
+                    character.OnInteract(interactorSquadType);
+                }
+                else
+                {
+                    Character.ActiveCharacter?.OnTapOnCeil(IsHighlighted ? this : null);
+                }
+            }
         }
     }
 }
