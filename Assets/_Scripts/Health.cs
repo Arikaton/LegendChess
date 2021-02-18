@@ -1,20 +1,25 @@
-﻿using UnityEngine;
+﻿using LegendChess.Charactrer;
+using UnityEngine;
 
-namespace _Scripts
+namespace LegendChess
 {
     public class Health : MonoBehaviour
     {
-        [SerializeField] private CharacterAnimationController characterAnimationController;
         [SerializeField] private int healthPoints;
+        private CharacterAnimator characterAnimator;
+        private StepHandler stepHandler;
+
+        private void Awake()
+        {
+            characterAnimator = GetComponent<CharacterAnimator>();
+            stepHandler = FindObjectOfType<StepHandler>();
+        }
 
         public void GetDamage(int damage)
         {
-            characterAnimationController.GetDamage();
             healthPoints -= damage;
-            if (healthPoints <= 0)
-            {
-                Death();
-            }
+            characterAnimator.GetDamage();
+            stepHandler.AddDamagedCharacter(this);
         }
 
         public void GetHealth(int health)
@@ -24,7 +29,8 @@ namespace _Scripts
 
         public void Death()
         {
-            characterAnimationController.Death();
+            if (healthPoints > 0) return;
+            characterAnimator.Death();
             Destroy(gameObject, 1f);
         }
     }

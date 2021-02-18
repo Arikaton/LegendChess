@@ -1,118 +1,144 @@
-﻿using System;
-using System.Collections;
-using _Scripts;
-using _Scripts.Charactrer;
-using _Scripts.Enums;
-using UnityEditor;
+﻿using System.Collections;
+using LegendChess.CharacterAttack;
+using LegendChess.Contracts;
+using LegendChess.Enums;
 using UnityEngine;
 
-public class Character : MonoBehaviour
+namespace LegendChess.Charactrer
 {
-    private static Character activeCharacter;
-
-    public RelationType relationType;
-    [SerializeField] private PlayerInput playerInput;
-    [SerializeField] private Field field;
-    [SerializeField] private Move move;
-    [SerializeField] private Health health;
-    [SerializeField] private Attack attack;
-
-    private bool moveEndPointChoosed = false;
-    private bool attackEndPointChoosed = false;
-    public Vector2Int MoveEndPoint { get; private set; }
-    public Vector2Int AttackEndPoint { get; private set; }
-
-    public IEnumerator MoveProcess()
+    [RequireComponent(typeof(BaseAttack), typeof(Health), typeof(Move))]
+    public class Character : MonoBehaviour, IInteractible
     {
-        move.PrepareToMove();
-        yield return StartCoroutine(move.DoMoveCor(MoveEndPoint));
-        moveEndPointChoosed = false;
-    }
+        public static Character ActiveCharacter { get; private set; }
 
-    public IEnumerator AttackProcess()
-    {
-        yield return StartCoroutine(move.RotateToPosition(AttackEndPoint));
+        [SerializeField] private SquadType squadType;
+        [SerializeField] private GameObject moveVFX;
+        private StepHandler stepHandler;
+        private BaseAttack attack;
+
+        private Field field;
+        private Health health;
+        private Move move;
+        public SquadType SquadType => squadType;
+        public Vector2Int? FinishMovePosition { get; set; }
+
+        private void Awake() => GetReferences();
         
-        var aimCharacter = field.GetCharacterByIndex(AttackEndPoint);
-        if (aimCharacter != null && relationType != aimCharacter.relationType)
-            yield return StartCoroutine(attack.DoAttackCor(aimCharacter));
-        attackEndPointChoosed = false;
-    }
-
-    private void Awake()
-    {
-        playerInput.OnClickOnCharacter += OnClickOnCharacter;
-        playerInput.OnEmptyClick += OnClickEmpty;
-        playerInput.OnClickOnCeil += OnClickOnCeil;
-    }
-
-    private void Start()
-    {
-        field.SetCeilBusy(move.Position, this);
-    }
-
-    private void OnClickOnCharacter(Character character)
-    {
-        if (character != this) return;
-        activeCharacter = this;
-        ChooseAction();
-    }
-
-    private void ChooseAction()
-    {
-        if (move.IsMoving) return;
-        field.TurnOffFields();
-        if (moveEndPointChoosed)
+        private void Start()
         {
-            field.HighlightCeilAndShowEffect(MoveEndPoint, EffectType.Move);
-            if (attackEndPointChoosed)
-            {
-                field.HighlightCeilAndShowEffect(AttackEndPoint, EffectType.Attack);
-            }
-            else
-            {
-                field.TurnOnFields(attack.AttackCeilCount, MoveEndPoint, MoveDirection.Any);
-            }
+            field.SetCellBusy(move.Position, gameObject, squadType);
         }
-        else
-        {
-            field.TurnOnFields(move.MaxMoveDistance, new Vector2Int(move.PositionX, move.PositionY), move.moveDirection);
-        }
-    }
 
-    private void OnClickOnCeil(Ceil ceil)
-    {
-        if (activeCharacter is null || activeCharacter != this)
-            return;
-        if (ceil.IsHighlighted)
+        public IEnumerator Move()
         {
-            if (attackEndPointChoosed)
+            HideVisual();
+            yield return StartCoroutine(move.MoveAction(FinishMovePosition.Value, this));
+            FinishMovePosition = null;
+        }
+
+        public IEnumerator Attack()
+        {
+            yield return StartCoroutine(attack.Attack());
+        }
+
+        public void OnCollision(Vector2Int nextStep)
+        {
+            var otherCharacter = field.GetGameObjectByIndex<Character>(nextStep);
+            if (otherCharacter is null) return;
+            if (otherCharacter.SquadType == squadType) return;
+            attack.AddCollisionTarget(otherCharacter.health);
+            otherCharacter.attack.AddCollisionTarget(health);
+            otherCharacter.Stop();
+        }
+
+        public void OnInteract(SquadType interactorSquadType)
+        {
+            if (squadType != interactorSquadType) return;
+            ActiveCharacter?.HideVisual();
+            ActiveCharacter = this;
+            UpdateVisual();
+        }
+
+        public void OnTapOnCeil(Cell cell)
+        {
+            if (cell is null)
+            {
+                Reset();
                 return;
-            if (moveEndPointChoosed)
+            }
+            if (FinishMovePosition == null)
             {
-                if (ceil.Position != MoveEndPoint)
-                {
-                    AttackEndPoint = ceil.Position;
-                    attackEndPointChoosed = true;
-                    MoveManager.Instance.AddToAttackQueue(this);
-                }
+                if (!CanMove()) return;
+                FinishMovePosition = cell.Position;
+                stepHandler.AddCharacter(this);
             }
             else
             {
-                field.SetCeilBusy(ceil.Position, this);
-                field.SetCeilFree(move.Position);
-                MoveEndPoint = new Vector2Int(ceil.PositionX, ceil.PositionY);
-                MoveManager.Instance.AddToMoveQueue(this);
-                moveEndPointChoosed = true;
+                attack.ProcessTapOnCeil(cell, FinishMovePosition.Value);
+            }
+            UpdateVisual();
+        }
+
+        private bool CanMove()
+        {
+            if (SquadType == SquadType.Black && stepHandler.IsBlackFull)
+                return false;
+            return SquadType != SquadType.White || !stepHandler.IsWhiteFull;
+        }
+
+        private void UpdateVisual()
+        {
+            field.TurnOffCells();
+            if (FinishMovePosition == null)
+            {
+                move.HighlightPossible(squadType);
+            }
+            else
+            {
+                ShowEndMovePos();
+                attack.ShowVisual(FinishMovePosition.Value);
             }
         }
-        field.TurnOffFields();
-        activeCharacter = null;
-    }
-    
-    private void OnClickEmpty()
-    {
-        field.TurnOffFields();
-        activeCharacter = null;
+
+        public void HideVisual()
+        {
+            moveVFX.SetActive(false);
+            attack.HideAttack();
+            field.TurnOffCells();
+        }
+
+        private void Stop()
+        {
+            move.Stop();
+        }
+
+        private void OnDestroy()
+        {
+            if (ActiveCharacter == this)
+                ActiveCharacter = null;
+            field.SetCellFree(move.Position);
+        }
+
+        private void ShowEndMovePos()
+        {
+            moveVFX.SetActive(true);
+            moveVFX.transform.position = new Vector3(FinishMovePosition.Value.x, transform.position.y, FinishMovePosition.Value.y);
+        }
+
+        private void GetReferences()
+        {
+            field = FindObjectOfType<Field>();
+            stepHandler = FindObjectOfType<StepHandler>();
+            attack = GetComponent<BaseAttack>();
+            move = GetComponent<Move>();
+            health = GetComponent<Health>();
+            attack.SetSquadType(squadType);
+        }
+
+        private void Reset()
+        {
+            HideVisual();
+            ActiveCharacter = null;
+        }
     }
 }

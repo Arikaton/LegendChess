@@ -1,46 +1,42 @@
-﻿using System;
+﻿using LegendChess.Charactrer;
+using LegendChess.Contracts;
+using LegendChess.Enums;
 using UnityEngine;
 
-public class PlayerInput : MonoBehaviour
+namespace LegendChess
 {
-    public event Action OnEmptyClick;
-    public event Action<Character> OnClickOnCharacter;
-    public event Action<Ceil> OnClickOnCeil;
-    
-    private Camera _camera;
-
-    private void Start()
+    public class PlayerInput : MonoBehaviour
     {
-        _camera = Camera.main;
-    }
-
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
+        [SerializeField] private CameraSwitcher cameraSwitcher;
+        [SerializeField] private SquadType squadType = SquadType.White;
+        
+        private Camera mainCamera;
+        private void Start()
         {
-            var ray = _camera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out var hitInfo))
+            mainCamera = Camera.main;
+        }
+
+        private void Update()
+        {
+            if (Input.GetMouseButtonDown(0))
             {
-                var hitTransform = hitInfo.transform;
-                if (hitTransform is null)
+                var ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out var hitInfo))
                 {
-                    OnEmptyClick?.Invoke();
-                    return;
-                }
-
-                var character = hitTransform.GetComponent<Character>();
-                if (character != null)
-                {
-                    OnClickOnCharacter?.Invoke(character);
-                    return;
-                }
-
-                var ceil = hitTransform.GetComponent<Ceil>();
-                if (ceil != null)
-                {
-                    OnClickOnCeil?.Invoke(ceil);
+                    var hitTransform = hitInfo.transform;
+                    if (hitTransform is null) return;
+                    var interactible = hitTransform.GetComponent<IInteractible>();
+                    if (interactible is null) return;
+                    interactible.OnInteract(squadType);
                 }
             }
+        }
+
+        public void ChangeSquad()
+        {
+            squadType = squadType == SquadType.Black ? SquadType.White : SquadType.Black;
+            Character.ActiveCharacter?.HideVisual();
+            cameraSwitcher.SwitchPosition();
         }
     }
 }

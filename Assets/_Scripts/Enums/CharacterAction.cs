@@ -1,4 +1,4 @@
-﻿namespace _Scripts.Enums
+﻿namespace LegendChess.Enums
 {
     public enum CharacterAction
     {
